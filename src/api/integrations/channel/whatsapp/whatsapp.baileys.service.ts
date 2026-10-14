@@ -1932,6 +1932,22 @@ export class BaileysStartupService extends ChannelStartupService {
                 if (typeof event.key.remoteJid === 'string' && typeof event.receipt.readTimestamp === 'number') {
                   remotesJidMap[event.key.remoteJid] = event.receipt.readTimestamp;
                 }
+
+                // KannChat: repassa o recibo por participante das mensagens que
+                // enviamos num grupo. A Evolution oficial só usa este evento para
+                // o próprio banco, e só para mensagem recebida.
+                const { key, receipt } = event;
+                if (!key?.fromMe || !key.id || !key.remoteJid?.endsWith('@g.us') || !receipt?.userJid) continue;
+                const lidaEm = receipt.readTimestamp ?? receipt.playedTimestamp;
+                this.sendDataWebhook(Events.MESSAGES_UPDATE, {
+                  keyId: key.id,
+                  remoteJid: key.remoteJid,
+                  fromMe: true,
+                  participant: receipt.userJid,
+                  status: lidaEm ? 'READ' : 'DELIVERY_ACK',
+                  receiptTimestamp: Number(lidaEm ?? receipt.receiptTimestamp) || null,
+                  instanceId: this.instanceId,
+                });
               }
 
               await Promise.all(
