@@ -26,6 +26,9 @@ COPY ./Docker ./Docker
 
 RUN chmod +x ./Docker/scripts/* && dos2unix ./Docker/scripts/*
 
+# KannChat: retry do Baileys sem cifragem dupla (479). Falha o build se não aplicar.
+RUN node ./Docker/scripts/kannchat-patch-baileys.cjs
+
 RUN ./Docker/scripts/generate_database.sh
 
 RUN npm run build

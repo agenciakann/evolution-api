@@ -1620,6 +1620,13 @@ export class BaileysStartupService extends ChannelStartupService {
             instanceId: this.instanceId,
           };
 
+          // KannChat: o ERROR vem do ack de erro do servidor, e o código (ex.:
+          // 479) só existe aqui. Vai para o webhook; o MessageUpdate do banco
+          // não tem a coluna e fica como está.
+          if (update.messageStubParameters?.length) {
+            message.messageStubParameters = update.messageStubParameters;
+          }
+
           if (update.message) {
             message.message = update.message;
           }
@@ -1655,8 +1662,11 @@ export class BaileysStartupService extends ChannelStartupService {
           if (update.message === null && update.status === undefined) {
             this.sendDataWebhook(Events.MESSAGES_DELETE, { ...key, status: 'DELETED' });
 
-            if (this.configService.get<Database>('DATABASE').SAVE_DATA.MESSAGE_UPDATE)
-              await this.prismaRepository.messageUpdate.create({ data: message });
+            if (this.configService.get<Database>('DATABASE').SAVE_DATA.MESSAGE_UPDATE) {
+              // eslint-disable-next-line @typescript-eslint/no-unused-vars
+              const { messageStubParameters: _stub, ...deleteData } = message;
+              await this.prismaRepository.messageUpdate.create({ data: deleteData });
+            }
 
             if (this.configService.get<Chatwoot>('CHATWOOT').ENABLED && this.localChatwoot?.enabled) {
               this.chatwootService.eventWhatsapp(
@@ -1703,7 +1713,7 @@ export class BaileysStartupService extends ChannelStartupService {
 
           if (this.configService.get<Database>('DATABASE').SAVE_DATA.MESSAGE_UPDATE) {
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            const { message: _msg, ...messageData } = message;
+            const { message: _msg, messageStubParameters: _stub, ...messageData } = message;
             await this.prismaRepository.messageUpdate.create({ data: messageData });
           }
 
